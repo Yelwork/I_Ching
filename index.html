@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>六十四卦易經牌</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: #f4f1ea; /* 宣紙背景色 */
+            color: #2c2925; /* 水墨黑 */
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+            overflow-x: hidden;
+        }
+
+        .perspective {
+            perspective: 1000px;
+        }
+        
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border: 2px solid #dcd3c6;
+        }
+
+        /* 牌背面 (未抽牌時的圖案 - 象牙白) */
+        .card-front {
+            background-color: #faf9f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #dcd3c6;
+            /* 畫框式雙層內陰影，增加實體牌質感 */
+            box-shadow: inset 0 0 0 4px #faf9f6, inset 0 0 0 6px #dcd3c6;
+        }
+        
+        .taiji {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(to left, white 50%, black 50%);
+            display: flex;
+            align-items: center;
+            position: relative;
+            border: 2px solid #dcd3c6;
+            opacity: 0.8;
+        }
+        .taiji::before, .taiji::after {
+            content: '';
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            border-radius: 50%;
+            left: 25%;
+        }
+        .taiji::before {
+            top: 0;
+            background-color: white;
+            border: 12.5px solid black;
+            box-sizing: border-box;
+        }
+        .taiji::after {
+            bottom: 0;
+            background-color: black;
+            border: 12.5px solid white;
+            box-sizing: border-box;
+        }
+
+        .card-back {
+            background-color: #faf9f6;
+            transform: rotateY(180deg);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+            overflow-y: auto;
+        }
+
+        .hexagram-symbol {
+            font-size: 8rem;
+            line-height: 1;
+            font-family: monospace;
+            color: #1a1a1a;
+            margin: 1rem 0;
+            font-weight: normal;
+        }
+
+        .red-stamp {
+            color: #9b2e2e;
+            border: 1px solid #9b2e2e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            display: inline-block;
+        }
+
+        /* 隱藏滾動條 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .deck-container {
+            position: relative;
+            width: 100%;
+            height: 280px; 
+            margin-top: 40px;
+            display: flex;
+            justify-content: center;
+            perspective: 1000px;
+            transition: opacity 0.5s ease;
+        }
+
+        .card-in-deck {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 60px;
+            height: 200px;
+            margin-left: -30px;
+            background-color: #faf9f6; /* 白色紙質 */
+            border: 2px solid #dcd3c6;
+            border-radius: 8px;
+            /* 邊緣陰影與紙張厚度感 */
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1), inset 0 0 10px rgba(0,0,0,0.05);
+            /* 以底部中心為圓心旋轉 */
+            transform-origin: bottom center;
+            transform: rotate(var(--angle));
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            /* 加入抓取與防止行動裝置捲動 */
+            cursor: grab;
+            touch-action: none; 
+        }
+
+        .card-in-deck:active {
+            cursor: grabbing;
+        }
+
+        /* 滑鼠移入時牌卡浮出 */
+        .card-in-deck:hover {
+            transform: rotate(var(--angle)) translateY(-25px) scale(1.05);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            z-index: 100 !important; /* 確保浮出的牌在最上層 */
+            border-color: #9b2e2e;
+        }
+
+        .fade-out { opacity: 0; pointer-events: none; }
+        .hidden-element { display: none !important; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center pb-12">
+
+    <header class="w-full max-w-4xl mx-auto pt-8 pb-6 px-4 text-center">
+        <h1 class="text-4xl font-bold mb-2 tracking-widest text-[#2c2925]">易經牌</h1>
+        <p class="text-gray-600 mb-8 text-sm">洞悉變化，指引迷津</p>
+        
+        <div class="flex justify-center space-x-4 border-b border-gray-300 pb-2">
+            <button onclick="switchTab('draw')" id="tab-draw" class="px-4 py-2 font-semibold text-[#9b2e2e] border-b-2 border-[#9b2e2e] transition-colors">
+                抽牌占卜
+            </button>
+            <button onclick="switchTab('gallery')" id="tab-gallery" class="px-4 py-2 font-semibold text-gray-500 hover:text-[#2c2925] transition-colors">
+                六十四卦牌庫
+            </button>
+        </div>
+    </header>
+
+    <main id="view-draw" class="w-full max-w-2xl mx-auto px-4 flex flex-col items-center">
+        
+        <!-- 領域選擇區 -->
+        <div class="w-full mb-6">
+            <p class="text-center text-[#2c2925] font-semibold mb-3">請先選擇您想占卜的領域：</p>
+            <div class="flex flex-wrap justify-center gap-2" id="category-buttons">
+                <button onclick="selectCategory('career')" class="cat-btn px-3 py-1.5 border border-[#dcd3c6] rounded-full text-sm text-gray-600 hover:bg-[#dcd3c6] transition-colors" data-cat="career">💼 事業,財運</button>
+                <button onclick="selectCategory('love')" class="cat-btn px-3 py-1.5 border border-[#dcd3c6] rounded-full text-sm text-gray-600 hover:bg-[#dcd3c6] transition-colors" data-cat="love">❤️ 感情,人際</button>
+                <button onclick="selectCategory('life')" class="cat-btn px-3 py-1.5 border border-[#dcd3c6] rounded-full text-sm text-gray-600 hover:bg-[#dcd3c6] transition-colors" data-cat="life">💡 生活,投資</button>
+                <button onclick="selectCategory('self')" class="cat-btn px-3 py-1.5 border border-[#dcd3c6] rounded-full text-sm text-gray-600 hover:bg-[#dcd3c6] transition-colors" data-cat="self">🧘 自我探索</button>
+                <button onclick="selectCategory('direction')" class="cat-btn px-3 py-1.5 border border-[#dcd3c6] rounded-full text-sm text-gray-600 hover:bg-[#dcd3c6] transition-colors" data-cat="direction">🧭 人生方向</button>
+            </div>
+            <p id="cat-warning" class="text-[#9b2e2e] text-xs text-center mt-2 h-4 opacity-0 transition-opacity">請點選上方領域後，拖曳牌卡抽出</p>
+        </div>
+
+        <!-- 扇形牌陣區 -->
+        <div id="deck-area" class="deck-container">
+            <!-- 卡牌會由 JS 動態生成 -->
+        </div>
+
+        <!-- 抽牌結果區 (初始隱藏) -->
+        <div id="result-area" class="hidden-element w-full flex flex-col items-center">
+            <div class="perspective w-72 h-[520px] mx-auto cursor-pointer" onclick="drawCard()">
+                <div id="active-card" class="card-inner">
+                    <!-- 牌背面 (初始狀態) -->
+                    <div class="card-front">
+                        <div class="flex flex-col items-center">
+                            <div class="taiji mb-6"></div>
+                            <p class="text-xl tracking-widest font-semibold opacity-90">解讀中...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 牌正面 (顯示結果) -->
+                    <div class="card-back justify-start no-scrollbar">
+                        <div class="text-left w-full flex justify-between items-start mb-1">
+                            <span id="result-id" class="red-stamp font-bold">第 00 卦</span>
+                            <span id="result-structure" class="text-xs text-gray-500 font-semibold border border-gray-300 rounded px-2 py-1">上卦 下卦</span>
+                        </div>
+                        
+                        <div class="flex flex-col items-center justify-start flex-grow pb-4">
+                            <div id="result-symbol" class="hexagram-symbol mt-0 mb-1">䷀</div>
+                            <h2 id="result-name" class="text-3xl font-bold mb-3 tracking-widest">卦名</h2>
+                            
+                            <div id="result-keywords" class="flex flex-wrap justify-center gap-2 mb-4">
+                                <!-- 關鍵字 -->
+                            </div>
+
+                            <div class="w-full text-left space-y-5 bg-white/50 p-4 rounded-lg border border-[#e8e4db]">
+                                <div>
+                                    <h3 class="text-gray-800 font-bold text-sm mb-1 border-b border-gray-300 pb-1">☯ 核心卦象解讀</h3>
+                                    <p id="result-meaning" class="text-gray-700 text-sm leading-relaxed mt-2"></p>
+                                </div>
+                                
+                                <div>
+                                    <h3 id="specific-title" class="text-[#9b2e2e] font-bold text-sm mb-1 border-b border-[#9b2e2e]/30 pb-1">專屬指引</h3>
+                                    <p id="result-specific" class="text-gray-800 text-[0.95rem] font-medium leading-relaxed mt-2"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="resetCard()" class="mt-8 px-6 py-2 bg-transparent border border-gray-400 rounded hover:bg-gray-200 transition-colors text-sm text-gray-600 hidden" id="reset-btn">
+                收起牌卡 (重新占卜)
+            </button>
+        </div>
+    </main>
+
+    <main id="view-gallery" class="w-full max-w-6xl mx-auto px-4 hidden">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4" id="gallery-grid">
+            <!-- 牌卡將透過 JS 動態生成 -->
+        </div>
+    </main>
+
+    <script>
+        const hexagramNames = [
+            "乾為天", "坤為地", "水雷屯", "山水蒙", "水天需", "天水訟", "地水師", "水地比", 
+            "風天小畜", "天澤履", "地天泰", "天地否", "天火同人", "火天大有", "地山謙", "雷地豫", 
+            "澤雷隨", "山風蠱", "地澤臨", "風地觀", "火雷噬嗑", "山火賁", "山地剝", "地雷復", 
+            "天雷无妄", "山天大畜", "山雷頤", "澤風大過", "坎為水", "離為火", "澤山咸", "雷風恆", 
+            "天山遯", "雷天大壯", "火地晉", "地火明夷", "風火家人", "火澤睽", "水山蹇", "雷水解", 
+            "山澤損", "風雷益", "澤天夬", "天風姤", "澤地萃", "地風升", "澤水困", "水風井", 
+            "澤火革", "火風鼎", "震為雷", "艮為山", "風山漸", "雷澤歸妹", "雷火豐", "火山旅", 
+            "巽為風", "兌為澤", "風水渙", "水澤節", "風澤中孚", "雷山小過", "水火既濟", "火水未濟"
+        ];
+
+        const hexagramMeanings = [
+            "創始萬物，剛健中正", "厚德載物，柔順包容", "萬物始生，充滿艱難", "啟蒙開智，順其自然", 
+            "等待時機，積蓄力量", "停止爭訟，退讓為高", "統帥軍隊，紀律嚴明", "親密無間，相輔相成", 
+            "微小積蓄，柔能克剛", "如履薄冰，謹慎行事", "陰陽交泰，通達安泰", "陰陽不交，閉塞不通", 
+            "志同道合，天下為公", "豐收富足，順天休命", "謙虛退讓，有吉無凶", "順時依勢，喜悅和樂", 
+            "順應時勢，隨遇而安", "革故鼎新，挽救敗壞", "居高臨下，親臨視察", "觀察萬物，誠心敬意", 
+            "咬碎障礙，刑罰分明", "文飾外表，恰如其分", "剝落衰敗，謹慎隱忍", "剝極而復，生機重現", 
+            "順乎自然，不存妄念", "大量積蓄，堅守正道", "頤養天年，謹言慎行", "負擔過重，棟橈之危", 
+            "重重險陷，保持誠信", "依附光明，柔順中正", "相互感應，真誠相待", "持之以恆，堅守正道", 
+            "退避隱藏，明哲保身", "氣勢強盛，不可妄動", "旭日東升，晉升明德", "光明受阻，艱難隱忍", 
+            "齊家治國，端正倫理", "背道而馳，求同存異", "步履維艱，反求諸己", "解除困難，緩和矛盾", 
+            "損己利人，誠心正意", "損上益下，大有作為", "決斷破除，防微杜漸", "不期而遇，防範未然", 
+            "聚集人才，順天應人", "步步高升，積小成大", "陷入困境，堅守節操", "取之不盡，用之不竭", 
+            "變革除舊，順應天時", "鼎新穩重，器宇軒昂", "震動震驚，從容鎮定", "動靜適時，知止不殆", 
+            "循序漸進，順應自然", "違背常理，不可妄動", "豐盛碩大，盛極必衰", "顛沛流離，漂泊不定", 
+            "順應風氣，無孔不入", "喜悅和樂，內外皆和", "渙散離心，順水推舟", "適度節制，不踰規矩", 
+            "誠信感化，誠實無欺", "稍有過失，宜下不宜上", "大功告成，防患未然", "尚未成功，充滿希望"
+        ];
+
+        const bagua = {
+            "天": { name: "乾", nature: "剛健與主動" },
+            "地": { name: "坤", nature: "包容與柔順" },
+            "雷": { name: "震", nature: "行動與爆發" },
+            "風": { name: "巽", nature: "順從與滲透" },
+            "水": { name: "坎", nature: "危險與流動" },
+            "火": { name: "離", nature: "光明與依附" },
+            "山": { name: "艮", nature: "停止與穩重" },
+            "澤": { name: "兌", nature: "喜悅與溝通" }
+        };
+
+        const hexagramStructures = [
+            "天天", "地地", "水雷", "山水", "水天", "天水", "地水", "水地", 
+            "風天", "天澤", "地天", "天地", "天火", "火天", "地山", "雷地", 
+            "澤雷", "山風", "地澤", "風地", "火雷", "山火", "山地", "地雷", 
+            "天雷", "山天", "山雷", "澤風", "水水", "火火", "澤山", "雷風", 
+            "天山", "雷天", "火地", "地火", "風火", "火澤", "水山", "雷水", 
+            "山澤", "風雷", "澤天", "天風", "澤地", "地風", "澤水", "水風", 
+            "澤火", "火風", "雷雷", "山山", "風山", "雷澤", "雷火", "火山", 
+            "風風", "澤澤", "風水", "水澤", "風澤", "雷山", "水火", "火水"
+        ];
+
+        const hexagrams = hexagramNames.map((name, index) => {
+            const structureStr = hexagramStructures[index];
+            const upper = structureStr[0];
+            const lower = structureStr[1];
+            const uInfo = bagua[upper];
+            const lInfo = bagua[lower];
+            const meaning = hexagramMeanings[index];
+            
+            const keywords = meaning.split('，').map(k => k.trim());
+            
+            let career, love, life, self, direction;
+            if (upper === lower) {
+                career = `此為「純${uInfo.name}」之象，能量極端且純粹。在事業與財運上，充滿了「${uInfo.nature}」的力量。建議你保持【${keywords[0]}】的態度，將資源與專注力集中發揮到極致。目前不宜分散投資或三心兩意，順著這股單一且強大的勢頭前進，是破局的關鍵。`;
+                love = `雙方同質性極高，皆帶有${uInfo.nature}的特質。好的時候如膠似漆、非常有默契；但發生摩擦時容易互不相讓。卦象提醒你需要學習【${keywords[1] || keywords[0]}】的智慧，嘗試在剛硬中加入一點柔軟，各退一步，才能求得長久和諧的關係。`;
+                life = `在生活與投資層面，目前的局勢呈現純粹的${uInfo.nature}狀態，往往伴隨著大進大出、快起快落的特性。建議以【${keywords[0]}】為主軸，審慎評估風險，勿盲目跟風。保持生活節奏的規律，是穩定運勢的基石。`;
+                self = `你的內在與外在呈現高度一致，正處於強烈的「${uInfo.nature}」狀態。這是一個深入認識自己極限與潛能的絕佳時機。不要逃避這種強烈的情緒或動力，去感受它，並思考這股力量如何為你所用，而不是被它控制。`;
+                direction = `整體人生方向反映了強烈的${upper}之象，這意味著你的命運軌跡正在經歷一段深刻的強化期。順勢而為，將【${keywords[0]}】的哲學貫徹到底。不要害怕與眾不同，堅持你的核心信念，必能開創出獨特的道路。`;
+            } else {
+                career = `你的外在環境如${upper}（${uInfo.nature}），而你目前的資源或內在基底如${lower}（${lInfo.nature}）。事業與財運正處於【${keywords[0]}】的狀態。要突破現狀，你需要利用「${lInfo.nature}」的優勢去適應或改變「${uInfo.nature}」的環境。宜調和內外，穩中求勝，切勿急躁。`;
+                love = `這是一段${upper}與${lower}交會的關係，充滿了互補與摩擦。在互動中，對方或目前的感情狀態可能處於「${uInfo.nature}」的情境，而你需要用「${lInfo.nature}」的心態來包容、應對或引導。放下堅持，尋求【${keywords[1] || keywords[0]}】，是關係升溫的秘訣。`;
+                life = `生活日常與投資決策上，你正面臨${upper}與${lower}的碰撞與交融。環境的變動可能讓你感到不安，卦象建議採取【${keywords[1] || keywords[0]}】的策略。平衡理想與現實的落差，不要把所有雞蛋放在同一個籃子裡，保持彈性是最好的投資。`;
+                self = `在自我探索的路上，你的內在潛意識渴望著「${lInfo.nature}」，但現實生活卻要求你展現出「${uInfo.nature}」。這種內外的拉扯是成長的契機。探索的關鍵在於：如何在這兩股不同的力量中找到平衡？接受自己的多面性，是帶來內心平靜的第一步。`;
+                direction = `面對未來的迷惘，這支卦給出的指引核心是：【${keywords[1] || keywords[0]}】。你需要調和內在的${lower}本質與外在的${upper}挑戰。不要執著於單一的成功模式，學會順應這兩種能量的轉換，你的人生方向將會豁然開朗。`;
+            }
+
+            return {
+                id: index + 1,
+                name: name,
+                symbol: String.fromCodePoint(0x4DC0 + index),
+                structure: `上${uInfo.name} 下${lInfo.name}`,
+                keywords: keywords,
+                meaning: meaning,
+                career: career,
+                love: love,
+                life: life,
+                self: self,
+                direction: direction
+            };
+        });
+
+        let isCardFlipped = false;
+        let selectedCategory = null; 
+
+        const categoryConfig = {
+            'career': { icon: '💼', title: '事業與財運', prop: 'career' },
+            'love': { icon: '❤️', title: '感情與人際', prop: 'love' },
+            'life': { icon: '💡', title: '生活與投資', prop: 'life' },
+            'self': { icon: '🧘', title: '自我探索', prop: 'self' },
+            'direction': { icon: '🧭', title: '人生方向', prop: 'direction' }
+        };
+
+        function selectCategory(cat) {
+            selectedCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.classList.add('bg-[#9b2e2e]', 'text-white', 'border-[#9b2e2e]');
+                    btn.classList.remove('text-gray-600', 'hover:bg-[#dcd3c6]');
+                } else {
+                    btn.classList.remove('bg-[#9b2e2e]', 'text-white', 'border-[#9b2e2e]');
+                    btn.classList.add('text-gray-600', 'hover:bg-[#dcd3c6]');
+                }
+            });
+            const warningEl = document.getElementById('cat-warning');
+            warningEl.classList.remove('opacity-100');
+            warningEl.classList.add('opacity-0');
+        }
+
+        function switchTab(tabId) {
+            const viewDraw = document.getElementById('view-draw');
+            const viewGallery = document.getElementById('view-gallery');
+            const tabDraw = document.getElementById('tab-draw');
+            const tabGallery = document.getElementById('tab-gallery');
+
+            if (tabId === 'draw') {
+                viewDraw.classList.remove('hidden');
+                viewGallery.classList.add('hidden');
+                tabDraw.className = "px-4 py-2 font-semibold text-[#9b2e2e] border-b-2 border-[#9b2e2e] transition-colors";
+                tabGallery.className = "px-4 py-2 font-semibold text-gray-500 hover:text-[#2c2925] transition-colors border-b-2 border-transparent";
+            } else {
+                viewDraw.classList.add('hidden');
+                viewGallery.classList.remove('hidden');
+                tabGallery.className = "px-4 py-2 font-semibold text-[#9b2e2e] border-b-2 border-[#9b2e2e] transition-colors";
+                tabDraw.className = "px-4 py-2 font-semibold text-gray-500 hover:text-[#2c2925] transition-colors border-b-2 border-transparent";
+                renderGallery(); 
+            }
+        }
+
+        function drawCard() {
+            if (!selectedCategory) {
+                const warningEl = document.getElementById('cat-warning');
+                warningEl.classList.remove('opacity-0');
+                warningEl.classList.add('opacity-100');
+                const deck = document.getElementById('deck-area');
+                deck.classList.add('animate-pulse');
+                setTimeout(() => deck.classList.remove('animate-pulse'), 500);
+                return;
+            }
+
+            if (isCardFlipped) return;
+
+            const deckArea = document.getElementById('deck-area');
+            const resultArea = document.getElementById('result-area');
+            deckArea.classList.add('fade-out');
+
+            setTimeout(() => {
+                deckArea.classList.add('hidden-element');
+                resultArea.classList.remove('hidden-element');
+
+                const randomIndex = Math.floor(Math.random() * 64);
+                const cardData = hexagrams[randomIndex];
+
+                document.getElementById('result-id').textContent = `第 ${cardData.id.toString().padStart(2, '0')} 卦`;
+                document.getElementById('result-structure').textContent = cardData.structure;
+                document.getElementById('result-symbol').textContent = cardData.symbol;
+                document.getElementById('result-name').textContent = cardData.name;
+                document.getElementById('result-meaning').textContent = cardData.meaning;
+                
+                const keywordsContainer = document.getElementById('result-keywords');
+                keywordsContainer.innerHTML = ''; 
+                cardData.keywords.forEach(kw => {
+                    const span = document.createElement('span');
+                    span.className = "px-3 py-1 bg-[#9b2e2e] text-white text-xs font-semibold rounded-full shadow-sm";
+                    span.textContent = kw;
+                    keywordsContainer.appendChild(span);
+                });
+
+                const catInfo = categoryConfig[selectedCategory];
+                document.getElementById('specific-title').innerHTML = `${catInfo.icon} ${catInfo.title}指引`;
+                document.getElementById('result-specific').textContent = cardData[catInfo.prop];
+
+                setTimeout(() => {
+                    const cardInner = document.getElementById('active-card');
+                    cardInner.classList.add('is-flipped');
+                    isCardFlipped = true;
+                    document.getElementById('reset-btn').classList.remove('hidden');
+                }, 100);
+
+            }, 500); 
+        }
+
+        function resetCard() {
+            const cardInner = document.getElementById('active-card');
+            const deckArea = document.getElementById('deck-area');
+            const resultArea = document.getElementById('result-area');
+
+            cardInner.classList.remove('is-flipped');
+            isCardFlipped = false;
+            document.getElementById('reset-btn').classList.add('hidden');
+            
+            setTimeout(() => {
+                document.querySelector('.card-back').scrollTop = 0;
+                resultArea.classList.add('hidden-element');
+                deckArea.classList.remove('hidden-element');
+                
+                setTimeout(() => {
+                    deckArea.classList.remove('fade-out');
+                }, 50);
+            }, 600); 
+        }
+
+        function initDeck() {
+            const deckArea = document.getElementById('deck-area');
+            deckArea.innerHTML = '';
+            const totalCards = 64;
+            const maxAngle = 75; // 展開成 150 度的巨大扇形
+            
+            for (let i = 0; i < totalCards; i++) {
+                const card = document.createElement('div');
+                card.className = 'card-in-deck';
+                
+                const percentage = i / (totalCards - 1);
+                const angle = -maxAngle + (percentage * maxAngle * 2);
+                card.style.setProperty('--angle', `${angle}deg`);
+                card.style.zIndex = i;
+                
+                // 拖曳互動邏輯 (支援滑鼠與觸控)
+                let startY = 0;
+                let currentY = 0;
+                let isDragging = false;
+
+                const startDrag = (e) => {
+                    if(!selectedCategory) {
+                        drawCard(); // 借用 drawCard 裡的警告效果
+                        return; 
+                    }
+                    isDragging = true;
+                    startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+                    card.style.transition = 'none'; // 移除過渡以跟隨手指
+                    card.style.zIndex = 200; // 拉到最上層
+                };
+
+                const doDrag = (e) => {
+                    if (!isDragging) return;
+                    const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+                    const deltaY = clientY - startY;
+                    
+                    // 只允許往上抽
+                    if (deltaY < 0) {
+                        card.style.transform = `rotate(var(--angle)) translateY(${deltaY}px)`;
+                    }
+                };
+
+                const endDrag = (e) => {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    const clientY = e.type.includes('mouse') ? e.clientY : e.changedTouches[0].clientY;
+                    const deltaY = clientY - startY;
+                    
+                    card.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    
+                    // 如果往上拖曳超過 50px，判定為「抽出」
+                    if (deltaY < -50) {
+                        card.style.transform = `rotate(var(--angle)) translateY(-300px)`; // 飛出去
+                        setTimeout(() => drawCard(), 200); // 延遲觸發翻牌
+                    } else {
+                        // 否則縮回去
+                        card.style.transform = `rotate(var(--angle))`;
+                        card.style.zIndex = i; // 恢復預設層級
+                    }
+                };
+
+                // 滑鼠事件
+                card.addEventListener('mousedown', startDrag);
+                window.addEventListener('mousemove', doDrag);
+                window.addEventListener('mouseup', endDrag);
+                
+                // 觸控事件
+                card.addEventListener('touchstart', startDrag, {passive: false});
+                window.addEventListener('touchmove', doDrag, {passive: false});
+                window.addEventListener('touchend', endDrag);
+
+                deckArea.appendChild(card);
+            }
+        }
+
+        let galleryRendered = false;
+        function renderGallery() {
+            if (galleryRendered) return; 
+            
+            const grid = document.getElementById('gallery-grid');
+            
+            hexagrams.forEach(card => {
+                const cardEl = document.createElement('div');
+                cardEl.className = "bg-[#faf9f6] border border-[#dcd3c6] rounded-lg p-3 flex flex-col items-center justify-center hover:shadow-lg transition-shadow cursor-default transform hover:-translate-y-1 duration-200 relative overflow-hidden";
+                cardEl.innerHTML = `
+                    <div class="absolute top-2 left-2 text-[0.6rem] text-[#9b2e2e] border border-[#9b2e2e] rounded px-1">${card.id}</div>
+                    <div class="text-5xl font-mono text-gray-800 my-2">${card.symbol}</div>
+                    <h3 class="font-bold text-md tracking-widest text-center">${card.name}</h3>
+                    <p class="text-xs text-gray-500 mt-1 text-center w-full truncate px-1" title="${card.meaning}">${card.meaning}</p>
+                `;
+                grid.appendChild(cardEl);
+            });
+            
+            galleryRendered = true;
+        }
+
+        window.onload = () => {
+            initDeck();
+        };
+    </script>
+</body>
+</html>
